@@ -14,18 +14,9 @@ import           Miso.String
 import qualified Miso.CSS as CSS
 import           Miso.CSS (StyleSheet)
 -----------------------------------------------------------------------------
-newtype Model = Model { _value :: Int }
-  deriving (Show, Eq)
------------------------------------------------------------------------------
-instance ToMisoString Model where
-  toMisoString (Model v) = toMisoString v
------------------------------------------------------------------------------
-value :: Lens Model Int
-value = lens _value $ \m v -> m { _value = v }
------------------------------------------------------------------------------
 data Action
-  = AddOne PointerEvent
-  | SubtractOne PointerEvent
+  = AddOne
+  | SubtractOne
   | SayHelloWorld
   deriving (Show, Eq)
 -----------------------------------------------------------------------------
@@ -37,32 +28,26 @@ foreign export javascript "hs_start" main :: IO ()
 -----------------------------------------------------------------------------
 main :: IO ()
 #ifdef INTERACTIVE
-main = reload (startApp app)
+main = reload (startApp defaultEvents app)
 #else
-main = run (startApp app)
+main = startApp defaultEvents app
 #endif
 -----------------------------------------------------------------------------
-app :: App Model Action
-app = (component (Model 0) updateModel viewModel)
-  { events = pointerEvents
-  , styles = [ Sheet sheet ]
+app :: App Int Action
+app = (component 0 updateModel viewModel)
+  { styles = [ Sheet sheet ]
   }
 -----------------------------------------------------------------------------
-
-
-updateModel :: Action -> Transition Model Action
-updateModel (AddOne event) = do
-    value += 1
-    io_ $ consoleLog (ms (show event))
-
-updateModel (SubtractOne event) = do
-    value -= 1
-    io_ $ consoleLog (ms (show event))
-
-updateModel (SayHelloWorld) = io_ (consoleLog "Hello World!")
-
+updateModel :: Action -> Effect parent Int Action
+updateModel = \case
+  AddOne ->
+    this += 1
+  SubtractOne ->
+    this -= 1
+  SayHelloWorld ->
+    io_ (consoleLog "Hello World!")
 -----------------------------------------------------------------------------
-viewModel :: Model -> View Model Action
+viewModel :: Int -> View Int Action
 viewModel x = H.div_
   [ P.class_ "counter-container" ]
   [ H.h1_
@@ -79,11 +64,11 @@ viewModel x = H.div_
     [ P.class_ "buttons-container"
     ]
     [ H.button_
-      [ E.onPointerDown AddOne
+      [ E.onClick AddOne
       , P.class_ "decrement-btn"
       ] [text "+"]
     , H.button_
-      [ E.onPointerDown SubtractOne
+      [ E.onClick SubtractOne
       , P.class_ "increment-btn"
       ] [text "-"]
     ]
